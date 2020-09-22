@@ -1,17 +1,149 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Tab 1
+      TODOs
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 1</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<!-- workaround für https://stackoverflow.com/questions/54291555/detect-a-click-outside-of-an-element -->
+<ion-content *ngIf="!(clickedAdd || clickedEdit)" [fullscreen]="true">
+  
+  <ion-toolbar color="light">
+    <ion-row>
+      <ion-searchbar [(ngModel)]="searchTerm" (ionChange)="search()" ></ion-searchbar>
+    </ion-row>
+    <ion-row>
+      <ion-col size="5">
+          <ion-select [(ngModel)]="selectedSearchCat" interface="popover" placeholder="Filter" (ionChange)="search()" >
+            <ion-select-option  *ngFor="let cat of categories">{{cat.title}}</ion-select-option>
+          </ion-select>
+      </ion-col>
+      <ion-col size="5">
+          <ion-select [(ngModel)]="sortOption" interface="popover" placeholder="Sort" (ionChange)="onChangeSort()">
+            <ion-select-option  *ngFor="let opt of sortOptions">{{opt}}</ion-select-option>
+          </ion-select>
+      </ion-col>
+      <ion-col size="2">
+        <ion-button expand="block" [disabled]="!(sortOption || selectedSearchCat)" (click)="clearFilters()">
+          <ion-icon name="close-outline" slot="icon-only" > </ion-icon>
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-toolbar>
+ 
+  <!--First LIST only for unchecked Todos!-->
+  <ion-list>
+    <ion-item-sliding *ngFor="let todo of todosDisplayed; let i = index">
+      <ion-item *ngIf="!todo.done">
+        <ion-checkbox (click)="checked(i)" slot="start" [(ngModel)]="todo.done"></ion-checkbox>
+        <ion-label class="ion-text-wrap" (click)="showInputEdit(todo, i)">{{todo.title}}</ion-label>
+      </ion-item>
+      <ion-item-options  *ngIf="!todo.done" side="end">
+        <!-- should be a bit bigger-->
+        <ion-item-option (click)="delete(i)">
+          <ion-icon name="trash-outline"></ion-icon>
+        </ion-item-option>
+      </ion-item-options>
+    </ion-item-sliding>
+  </ion-list>
 
-  <app-explore-container name="Tab 1 page"></app-explore-container>
+  <!--SECOND LIST only for checked Todos (DONE!)!-->
+  <ion-list>
+    <ion-item-sliding *ngFor="let todo of todosDisplayed; let i = index">
+      <ion-item *ngIf="todo.done">
+        <ion-checkbox (click)="checked(i)" slot="start" [(ngModel)]="todo.done"></ion-checkbox>
+        <ion-label class="ion-text-wrap" (click)="showInputEdit(todo, i)">{{todo.title}}</ion-label>
+      </ion-item>
+      <ion-item-options side="end" *ngIf="todo.done">
+        <!-- should be a bit bigger-->
+        <ion-item-option (click)="delete(i)">
+          <ion-icon name="trash-outline"></ion-icon>
+        </ion-item-option>
+      </ion-item-options>
+    </ion-item-sliding>
+  </ion-list>
+
 </ion-content>
+
+<!-- quasi ngElse-->
+<ion-content *ngIf="clickedAdd || clickedEdit" [fullscreen]="true"  (click)="hideInput()">
+  <ion-toolbar color="light">
+    <ion-row>
+      <ion-searchbar [disabled]="clickedAdd || clickedEdit">
+      </ion-searchbar>
+    </ion-row>
+    <ion-row>
+      <ion-col size="5">
+          <ion-select [disabled]="clickedAdd || clickedEdit" [(ngModel)]="selectedSearchCat" interface="popover" placeholder="Filter" >
+          </ion-select>
+      </ion-col>
+      <ion-col size="5">
+          <ion-select [disabled]="clickedAdd || clickedEdit" [(ngModel)]="sortOption" interface="popover" placeholder="Sort" >
+          </ion-select>
+      </ion-col>
+      <ion-col size="2">
+        <ion-button expand="block" [disabled]="!(sortOption || selectedSearchCat)" (click)="clearFilters()">
+          <ion-icon name="close-outline" slot="icon-only" > </ion-icon>
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-toolbar>
+  <ion-list>
+    <ion-item-sliding *ngFor="let todo of todosDisplayed; let i = index">
+      <ion-item *ngIf="!todo.done" >
+        <ion-checkbox [disabled]="clickedAdd || clickedEdit" slot="start" [(ngModel)]="todo.done"></ion-checkbox>
+        <ion-label >{{todo.title}}</ion-label>
+      </ion-item>
+    </ion-item-sliding>
+  </ion-list>
+  <ion-list>
+    <ion-item-sliding *ngFor="let todo of todosDisplayed; let i = index">
+      <ion-item *ngIf="todo.done" >
+        <ion-checkbox [disabled]="clickedAdd || clickedEdit" slot="start" [(ngModel)]="todo.done"></ion-checkbox>
+        <ion-label >{{todo.title}}</ion-label>
+      </ion-item>
+    </ion-item-sliding>
+</ion-list>
+</ion-content>
+
+<!-- schwebender ADD button-->
+<ion-fab *ngIf="!(clickedAdd || clickedEdit)" vertical="bottom" horizontal="end" slot="fixed">
+  <ion-fab-button (click)="showInputAdd()">
+    <ion-icon name="add"></ion-icon>
+  </ion-fab-button>
+</ion-fab>
+
+<!-- Textfeld zum hinzufügen/edtieren von Todos-->
+<ion-footer *ngIf="clickedAdd  || clickedEdit">
+  <ion-toolbar color="light">
+    <ion-row>
+      <ion-col size="10">
+        <ion-textarea maxlength="150" autosize placeholder= "new task..." [(ngModel)]="inputText" ></ion-textarea>
+      </ion-col>
+      <ion-col size="2">
+        <ion-button *ngIf="clickedAdd" [disabled]="inputText===''" expand="block" (click)="add()">
+          <ion-label >OK</ion-label>
+        </ion-button>
+        <ion-button *ngIf="clickedEdit" [disabled]="inputText===''" expand="block" (click)="edit()">
+          <ion-label >OK</ion-label>
+        </ion-button>
+      </ion-col>
+    </ion-row>
+    <ion-row>
+      <ion-col size="6">
+        <ion-button expand="block" (click)="alarm()">
+          <ion-icon name="alarm-outline" slot="start" > </ion-icon>
+          <ion-label >Set Alarm</ion-label>
+        </ion-button>
+      </ion-col>
+      <ion-col size="6">
+        <ion-button expand="block">
+          <ion-select [(ngModel)]="selectedCat" placeholder="Category" interface="popover">
+            <ion-select-option  *ngFor="let cat of categories">{{cat.title}}</ion-select-option>
+          </ion-select>
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-toolbar>
+</ion-footer>
